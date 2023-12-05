@@ -34,6 +34,11 @@
 ## Map Design
 
 ## Interactable fishing spots
+#### fishing assets!
+https://shubibubi.itch.io/cozy-fishing
 
+
+Fyrox Demo Source Code
+https://github.com/FyroxEngine/Fyrox-demo-projects
 
 
