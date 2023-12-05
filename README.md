@@ -34,6 +34,8 @@
 ## Map Design
 
 ## Interactable fishing spots
+#### fishing assets!
+https://shubibubi.itch.io/cozy-fishing
 
 
 
