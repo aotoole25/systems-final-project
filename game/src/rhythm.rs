@@ -8,7 +8,7 @@ use fyrox::{
         visitor::prelude::*, TypeUuidProvider
     },
     asset::manager::ResourceManager,
-    event::{ElementState, Event, WindowEvent},
+    event::{ElementState, Event, WindowEvent, MouseButton},
     keyboard::KeyCode,
     impl_component_provider,
     resource::texture::Texture,
@@ -27,7 +27,15 @@ use std::path::Path;
 pub struct RhythmBlock{
     speed: f32,
     reference_block: Handle<Node>,
+    good: bool,
+    great: bool,
+    touching: bool, 
+    clicked: bool,
 }
+
+const GOOD_DISTANCE: f32 = 0.2;
+const GREAT_DISTANCE: f32 = 0.1;
+const TOUCH_DISTANCE: f32 = 1.0;
 
 impl_component_provider!(RhythmBlock,);
 
@@ -43,10 +51,22 @@ impl ScriptTrait for RhythmBlock {
     fn on_init(&mut self, context: &mut ScriptContext) { }
     
     // Put start logic - it is called when every other script is already initialized.
-    fn on_start(&mut self, context: &mut ScriptContext) { }
+    fn on_start(&mut self, context: &mut ScriptContext) {
+        self.touching = false;
+        self.good = false;
+        self.great = false;
+        self.clicked = false;
+    }
 
     // Called whenever there is an event from OS (mouse click, keypress, etc.)
     fn on_os_event(&mut self, event: &Event<()>, context: &mut ScriptContext) {
+        if let Event::WindowEvent { event, .. } = event {
+            if let &WindowEvent::MouseInput {button, state, .. } = event {
+                if button == MouseButton::Left {
+                    self.clicked = state == ElementState::Pressed;
+                }
+            }
+        }
     }
 
     // Called every frame at fixed rate of 60 FPS.
@@ -62,8 +82,37 @@ impl ScriptTrait for RhythmBlock {
                 let offset_down = Vector3::new(0.0, self.speed*-0.01, 0.0);
                 transform.offset(offset_down);
 
-                //block disappears when it hits its reference block
-                if rectangle.local_transform().position().y <= ref_position.y {
+                //touching reference block
+                if self.touching == false && (rectangle.local_transform().position().y <= ref_position.y + TOUCH_DISTANCE) {
+                    self.touching = true;
+                }
+
+                //close enough to ref block to be "good"
+                if self.good == false && (rectangle.local_transform().position().y <= ref_position.y + GOOD_DISTANCE) {
+                    self.good = true;
+                }
+
+                //close enough to be "great"
+                if self.great == false && (rectangle.local_transform().position().y <= ref_position.y + GREAT_DISTANCE) {
+                    self.good = true;
+                }
+
+                //farther and no longer great
+                if self.great == true && (rectangle.local_transform().position().y <= ref_position.y - GREAT_DISTANCE) {
+                    self.great = false;
+                }
+
+                //farther and no longer "good"
+                if self.good == true && (rectangle.local_transform().position().y <= ref_position.y - GOOD_DISTANCE) {
+                    self.good = false;
+                }
+
+                //farther and no longer "touching"
+                if self.touching == true && (rectangle.local_transform().position().y <= ref_position.y - TOUCH_DISTANCE) {
+                    self.touching = false;
+                }
+
+                if self.clicked == true {
                     rectangle.set_visibility(false);
                 }
             }
