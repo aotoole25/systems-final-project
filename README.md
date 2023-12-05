@@ -30,3 +30,10 @@
   a shop menu for buying things? 
   a menu to change our rod/hook? 
 
+
+## Map Design
+
+## Interactable fishing spots
+
+
+
