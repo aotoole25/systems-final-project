@@ -34,6 +34,7 @@ impl PluginConstructor for GameConstructor {
         let script_constructors = &_context.serialization_context.script_constructors;
         script_constructors.add::<player::Player>("Player");
         script_constructors.add::<rhythm::RhythmBlock>("Rhythm Block");
+        script_constructors.add::<rhythm::ProgressBar>("Progress Bar");
     }
 
     fn create_instance(&self, scene_path: Option<&str>, context: PluginContext) -> Box<dyn Plugin> {
