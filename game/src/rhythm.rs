@@ -35,6 +35,12 @@ pub struct RhythmBlock{
     great: bool,
     touching: bool, 
     clicked: bool,
+    active: bool,
+    next_block: Handle<Node>,
+    up: bool,
+    down: bool,
+    right: bool,
+    left: bool,
 }
 
 enum Message {
@@ -44,6 +50,7 @@ enum Message {
     BadClick,
     Win,
     Loss,
+    Activate (Handle<Node>),
 }
 
 impl_component_provider!(RhythmBlock);
@@ -65,16 +72,38 @@ impl ScriptTrait for RhythmBlock {
         self.good = false;
         self.great = false;
         self.clicked = false;
+        context.message_dispatcher.subscribe_to::<Message>(context.handle);
     }
 
     // Called whenever there is an event from OS (mouse click, keypress, etc.)
     fn on_os_event(&mut self, event: &Event<()>, context: &mut ScriptContext) {
-        if let Event::WindowEvent { event, .. } = event {
-            if let WindowEvent::KeyboardInput { event, .. } = event {
-                let is_pressed = event.state == ElementState::Pressed;
-                match event.physical_key {
-                    fyrox::keyboard::PhysicalKey::Code(KeyCode::ArrowUp) => self.clicked = event.state == ElementState::Pressed,
-                    _ => (),
+        if self.active{
+            if let Event::WindowEvent { event, .. } = event {
+                if let WindowEvent::KeyboardInput { event, .. } = event {
+                    let is_pressed = event.state == ElementState::Pressed;
+                    match event.physical_key {
+                        fyrox::keyboard::PhysicalKey::Code(KeyCode::ArrowUp) => {
+                            if self.up {
+                                self.clicked = is_pressed;
+                            }
+                        }
+                        fyrox::keyboard::PhysicalKey::Code(KeyCode::ArrowDown) => {
+                            if self.down {
+                                self.clicked = is_pressed;
+                            }
+                        }
+                        fyrox::keyboard::PhysicalKey::Code(KeyCode::ArrowRight) => {
+                            if self.right {
+                                self.clicked = is_pressed;
+                            }
+                        }
+                        fyrox::keyboard::PhysicalKey::Code(KeyCode::ArrowLeft) => {
+                            if self.left {
+                                self.clicked = is_pressed;
+                            }
+                        }
+                        _ => (),
+                    }
                 }
             }
         }
@@ -123,19 +152,36 @@ impl ScriptTrait for RhythmBlock {
                     self.touching = false;
                 }
 
-                if self.clicked == true {
-                    rectangle.set_visibility(false);
+                if self.active {
+                    if self.clicked == true {
+                        //block disappears
+                        rectangle.set_visibility(false);
 
-                    if self.great {
-                        context.message_sender.send_global(Message::GreatClick);
-                    } else if self.good {
-                        context.message_sender.send_global(Message::GoodClick);
-                    } else if self.touching {
-                        context.message_sender.send_global(Message::OkClick);
-                    } else {
-                        context.message_sender.send_global(Message::BadClick);
+                        //sends message depending on how good click was
+                        if self.great {
+                            context.message_sender.send_global(Message::GreatClick);
+                        } else if self.good {
+                            context.message_sender.send_global(Message::GoodClick);
+                        } else if self.touching {
+                            context.message_sender.send_global(Message::OkClick);
+                        } else {
+                            context.message_sender.send_global(Message::BadClick);
+                        }
+
+                        //activates next block and deactivates itself
+                        context.message_sender.send_global(Message::Activate(self.next_block));
+                        self.active = false;
                     }
                 }
+            }
+        }
+    }
+
+    fn on_message(&mut self, message: &mut dyn ScriptMessagePayload, ctx: &mut ScriptMessageContext) {
+        //responds to activation after prev block is clicked
+        if let Some(Message::Activate(node_handle)) = message.downcast_ref::<Message>() {
+            if node_handle.index() == ctx.handle.index() {
+                self.active = true;
             }
         }
     }
