@@ -1,5 +1,6 @@
 //! Contains all methods and structures to create and manage cameras. See [`Camera`] docs for more info.
 
+
 use crate::camera::lazy_static::lazy_static;
 
 use fyrox::{
@@ -37,6 +38,7 @@ use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
+
 
 
 /// Perspective projection make parallel lines to converge at some point. Objects will be smaller
@@ -320,8 +322,8 @@ pub struct Camera {
    #[reflect(setter = "set_enabled")]
    enabled: InheritableVariable<bool>,
 
-   #[reflect(setter = "set_skybox")]
-   sky_box: InheritableVariable<Option<SkyBox>>,
+//    #[reflect(setter = "set_skybox")]
+//    sky_box: InheritableVariable<Option<SkyBox>>,
 
    #[reflect(setter = "set_environment")]
    environment: InheritableVariable<Option<TextureResource>>,
@@ -342,6 +344,7 @@ pub struct Camera {
    #[visit(skip)]
    #[reflect(hidden)]
    projection_matrix: Matrix4<f32>,
+sky_box: InheritableVariable<Option<SkyBox>>,
 }
 
 impl Deref for Camera {
@@ -506,22 +509,22 @@ impl Camera {
        self.enabled.set_value_and_mark_modified(enabled)
    }
 
-   /// Sets new skybox. Could be None if no skybox needed.
+   // Sets new skybox. Could be None if no skybox needed.
    pub fn set_skybox(&mut self, skybox: Option<SkyBox>) -> Option<SkyBox> {
        self.sky_box.set_value_and_mark_modified(skybox)
    }
 
-   /// Return optional mutable reference to current skybox.
+   // Return optional mutable reference to current skybox.
    pub fn skybox_mut(&mut self) -> Option<&mut SkyBox> {
        self.sky_box.get_value_mut_and_mark_modified().as_mut()
    }
 
-   /// Return optional shared reference to current skybox.
+   // Return optional shared reference to current skybox.
    pub fn skybox_ref(&self) -> Option<&SkyBox> {
        self.sky_box.as_ref()
    }
 
-   /// Replaces the skybox.
+   // Replaces the skybox.
    pub fn replace_skybox(&mut self, new: Option<SkyBox>) -> Option<SkyBox> {
        std::mem::replace(self.sky_box.get_value_mut_and_mark_modified(), new)
    }
@@ -690,7 +693,7 @@ impl Camera {
 }
 
 impl NodeTrait for Camera {
-   crate::impl_query_component!();
+   //crate::impl_query_component!();
 
    /// Returns current **local-space** bounding box.
    #[inline]
@@ -937,7 +940,7 @@ impl ColorGradingLut {
    }
 }
 
-/// A fixed set of possible sky boxes, that can be selected when building [`Camera`] scene node.
+// A fixed set of possible sky boxes, that can be selected when building [`Camera`] scene node.
 #[derive(Default)]
 pub enum SkyBoxKind {
    /// Uses built-in sky box. This is default sky box.
@@ -964,21 +967,21 @@ fn load_texture(data: &[u8], id: &str) -> TextureResource {
 
 lazy_static! {
    static ref BUILT_IN_SKYBOX_FRONT: TextureResource = load_texture(
-       include_bytes!("skybox/front.png"),
+       include_bytes!("data/16x16 Outdoors Tileset/Outdoors_04.png"),
        "__BUILT_IN_SKYBOX_FRONT",
    );
    static ref BUILT_IN_SKYBOX_BACK: TextureResource =
-       load_texture(include_bytes!("skybox/back.png"), "__BUILT_IN_SKYBOX_BACK",);
+       load_texture(include_bytes!("data/16x16 Outdoors Tileset/Outdoors_04.png"), "__BUILT_IN_SKYBOX_BACK",);
    static ref BUILT_IN_SKYBOX_TOP: TextureResource =
-       load_texture(include_bytes!("skybox/top.png"), "__BUILT_IN_SKYBOX_TOP",);
+       load_texture(include_bytes!("data/16x16 Outdoors Tileset/Outdoors_04.png"), "__BUILT_IN_SKYBOX_TOP",);
    static ref BUILT_IN_SKYBOX_BOTTOM: TextureResource = load_texture(
-       include_bytes!("skybox/bottom.png"),
+       include_bytes!("data/16x16 Outdoors Tileset/Outdoors_04.png"),
        "__BUILT_IN_SKYBOX_BOTTOM",
    );
    static ref BUILT_IN_SKYBOX_LEFT: TextureResource =
-       load_texture(include_bytes!("skybox/left.png"), "__BUILT_IN_SKYBOX_LEFT",);
+       load_texture(include_bytes!("data/16x16 Outdoors Tileset/Outdoors_04.png"), "__BUILT_IN_SKYBOX_LEFT",);
    static ref BUILT_IN_SKYBOX_RIGHT: TextureResource = load_texture(
-       include_bytes!("skybox/right.png"),
+       include_bytes!("data/16x16 Outdoors Tileset/Outdoors_04.png"),
        "__BUILT_IN_SKYBOX_RIGHT",
    );
    static ref BUILT_IN_SKYBOX: SkyBox = SkyBoxKind::make_built_in_skybox();
@@ -1090,13 +1093,13 @@ impl CameraBuilder {
        self
    }
 
-   /// Sets desired skybox.
+   // Sets desired skybox.
    pub fn with_skybox(mut self, skybox: SkyBox) -> Self {
        self.skybox = SkyBoxKind::Specific(skybox);
        self
    }
 
-   /// Sets desired skybox.
+   // Sets desired skybox.
    pub fn with_specific_skybox(mut self, skybox_kind: SkyBoxKind) -> Self {
        self.skybox = skybox_kind;
        self
@@ -1166,17 +1169,20 @@ impl CameraBuilder {
    }
 
    
-fn create_camera(scene: &mut Scene) -> Handle<Node> {
+   fn create_perspective_camera(graph: &mut Graph) -> Handle<Node> {
     CameraBuilder::new(BaseBuilder::new())
-        // Set some properties.
-        .with_fov(80.0f32.to_radians())
-        .with_z_far(256.0)
-        .build(&mut scene.graph)
+        .with_projection(Projection::Orthographic(OrthographicProjection {
+            vertical_size: 5.0,
+            z_near: 0.025,
+            z_far: 1024.0,
+        }))
+        .build(graph)
 }
+
 
 }
 
-/// SkyBox builder is used to create new skybox in declarative manner.
+// SkyBox builder is used to create new skybox in declarative manner.
 pub struct SkyBoxBuilder {
    /// Texture for front face.
    pub front: Option<TextureResource>,
@@ -1245,13 +1251,15 @@ impl SkyBoxBuilder {
 
        Ok(skybox)
    }
+   
 }
 
-/// Skybox is a huge box around camera. Each face has its own texture, when textures are
-/// properly made, there is no seams and you get good decoration which contains static
-/// skies and/or some other objects (mountains, buildings, etc.). Usually skyboxes used
-/// in outdoor scenes, however real use of it limited only by your imagination. Skybox
-/// will be drawn first, none of objects could be drawn before skybox.
+// Skybox is a huge box around camera. Each face has its own texture, when textures are
+// properly made, there is no seams and you get good decoration which contains static
+// skies and/or some other objects (mountains, buildings, etc.). Usually skyboxes used
+// in outdoor scenes, however real use of it limited only by your imagination. Skybox
+// will be drawn first, none of objects could be drawn before skybox.
+
 #[derive(Debug, Clone, Default, PartialEq, Reflect, Visit, Eq)]
 pub struct SkyBox {
    /// Texture for front face.
@@ -1560,4 +1568,6 @@ impl SkyBox {
    pub fn back(&self) -> Option<TextureResource> {
        self.back.clone()
    }
+
+   
 }
